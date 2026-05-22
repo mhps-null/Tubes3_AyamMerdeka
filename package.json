@@ -1,0 +1,33 @@
+{
+  "name": "tubes3_ayammerdeka",
+  "version": "1.0.0",
+  "description": "Tugas Besar 3 Strategi Algoritma",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "check": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhps-null/Tubes3_AyamMerdeka.git"
+  },
+  "keywords": [
+    "chromium-extension",
+    "typescript",
+    "pattern-matching",
+    "kmp",
+    "boyer-moore"
+  ],
+  "author": "AyamMerdeka",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mhps-null/Tubes3_AyamMerdeka/issues"
+  },
+  "homepage": "https://github.com/mhps-null/Tubes3_AyamMerdeka#readme",
+  "devDependencies": {
+    "@types/chrome": "^0.1.42",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}
