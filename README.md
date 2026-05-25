@@ -1,6 +1,10 @@
 # Judol Detector
 
-Chromium browser extension untuk mendeteksi teks yang mengandung unsur judi online pada halaman web. Project ini dibuat untuk Tugas Besar 3 IF2211 Strategi Algoritma.
+> Tugas Besar 3 IF2211 Strategi Algoritma
+
+<p align="center"> <img src="doc/preview.png" width="60%"/> </p>
+
+Chromium browser extension untuk mendeteksi teks yang mengandung unsur judi online pada halaman web.
 
 ## Fitur
 
@@ -172,8 +176,14 @@ http://localhost:5500/tests/pages/layout-safety.html
 
 Kelompok: AyamMerdeka
 
-| Nama                             | NIM      | Tugas                           |
+- 13524051 Mikhael Andrian Yonatan
+- 13524053 Muhammad Haris Putra Sulastianto
+- 13524105 Nicholas Luis Chandra
+
+Teknik Informatika, Institut Teknologi Bandung — 2026
+
+<!-- | Nama                             | NIM      | Tugas                           |
 | -------------------------------- | -------- | ------------------------------- |
 | Mikhael Andrian Yonatan          | 13524051 | Algorithm, Censor, OCR          |
 | Muhammad Haris Putra Sulastianto | 13524053 | DOM & Extension, Popup, Tooltip |
-| Nicholas Luis Chandra            | 13524105 | Algorithm                       |
+| Nicholas Luis Chandra            | 13524105 | Algorithm                       | -->
