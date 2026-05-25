@@ -144,6 +144,29 @@ function loadAndRenderStatistics(): void {
   });
 }
 
+function attachStorageChangeListener(): void {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local") {
+      return;
+    }
+
+    if (!(SCAN_STATISTICS_STORAGE_KEY in changes)) {
+      return;
+    }
+
+    const newStatistics = changes[SCAN_STATISTICS_STORAGE_KEY].newValue as
+      | StoredPageScanStatistics
+      | undefined;
+
+    if (newStatistics === undefined) {
+      renderEmptyState();
+      return;
+    }
+
+    renderStatistics(newStatistics);
+  });
+}
+
 function attachRescanButtonListener(): void {
   const rescanButton = getButtonById("rescan-button");
 
@@ -185,6 +208,7 @@ function attachRescanButtonListener(): void {
 }
 
 loadAndRenderStatistics();
+attachStorageChangeListener();
 attachRescanButtonListener();
 
 export {};

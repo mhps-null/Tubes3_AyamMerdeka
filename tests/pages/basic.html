@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Judol Detector Basic Test</title>
+  </head>
+  <body>
+    <h1>Judol Detector Basic Test</h1>
+
+    <section>
+      <h2>Regex Match</h2>
+      <p>Promo hari ini SLOT99 dan MAXWIN138 sedang ramai.</p>
+      <p>Contoh lain: GACOR777, HOKI88, dan LIVE22.</p>
+    </section>
+
+    <section>
+      <h2>Exact Match Nanti</h2>
+      <p>Kalimat ini mengandung kata slot dan gacor tanpa angka.</p>
+      <p>Bagian ini nanti baru aktif kalau KMP/BM sudah diisi.</p>
+    </section>
+
+    <section>
+      <h2>Ignored Elements</h2>
+      <input value="SLOT99 di input tidak perlu discan" />
+      <textarea>GACOR99 di textarea tidak perlu discan</textarea>
+      <script>
+        const hiddenKeyword = "MAXWIN999";
+      </script>
+      <style>
+        .fake::after {
+          content: "SLOT88";
+        }
+      </style>
+    </section>
+
+    <section>
+      <h2>Manual DOM Change</h2>
+      <button id="add-content-button">Tambah Konten Baru</button>
+      <div id="dynamic-content"></div>
+    </section>
+
+    <script>
+      document
+        .getElementById("add-content-button")
+        .addEventListener("click", () => {
+          const p = document.createElement("p");
+          p.textContent = "Konten baru dari DOM: SLOT777 dan MAXWIN234.";
+          document.getElementById("dynamic-content").appendChild(p);
+        });
+    </script>
+  </body>
+</html>
