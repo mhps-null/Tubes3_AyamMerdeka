@@ -1,5 +1,10 @@
-import type { TextScanTarget } from "../shared/types";
+import {
+  DETECTOR_ELEMENT_ATTRIBUTE,
+  HIGHLIGHT_CLASS_NAME,
+  TOOLTIP_ID,
+} from "./domConstants";
 import { normalizeTextForMatching } from "../shared/textNormalizer";
+import type { TextScanTarget } from "../shared/types";
 
 const IGNORED_TAG_NAMES = new Set([
   "script",
@@ -11,16 +16,89 @@ const IGNORED_TAG_NAMES = new Set([
   "option",
   "svg",
   "canvas",
+  "template",
 ]);
 
 function hasVisibleText(text: string | null): boolean {
   return text !== null && text.trim().length > 0;
 }
 
-function shouldIgnoreParentElement(element: Element): boolean {
+function isIgnoredTag(element: Element): boolean {
   const tagName = element.tagName.toLowerCase();
 
   return IGNORED_TAG_NAMES.has(tagName);
+}
+
+function isDetectorInjectedElement(element: Element): boolean {
+  if (element.id === TOOLTIP_ID) {
+    return true;
+  }
+
+  if (element.classList.contains(HIGHLIGHT_CLASS_NAME)) {
+    return true;
+  }
+
+  if (element.hasAttribute(DETECTOR_ELEMENT_ATTRIBUTE)) {
+    return true;
+  }
+
+  return element.closest(`[${DETECTOR_ELEMENT_ATTRIBUTE}]`) !== null;
+}
+
+function isElementHidden(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (element.hidden) {
+    return true;
+  }
+
+  if (element.getAttribute("aria-hidden") === "true") {
+    return true;
+  }
+
+  const style = window.getComputedStyle(element);
+
+  return (
+    style.display === "none" ||
+    style.visibility === "hidden" ||
+    style.opacity === "0"
+  );
+}
+
+function hasHiddenAncestor(element: Element): boolean {
+  let currentElement: Element | null = element;
+
+  while (
+    currentElement !== null &&
+    currentElement !== document.documentElement
+  ) {
+    if (isElementHidden(currentElement)) {
+      return true;
+    }
+
+    currentElement = currentElement.parentElement;
+  }
+
+  return false;
+}
+
+function isEditableElement(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  return element.isContentEditable;
+}
+
+function shouldIgnoreParentElement(element: Element): boolean {
+  return (
+    isIgnoredTag(element) ||
+    isDetectorInjectedElement(element) ||
+    hasHiddenAncestor(element) ||
+    isEditableElement(element)
+  );
 }
 
 function getAcceptedParentElement(node: Text): Element | null {

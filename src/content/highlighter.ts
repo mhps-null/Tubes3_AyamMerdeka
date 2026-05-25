@@ -4,7 +4,10 @@ import type {
   TextScanTarget,
 } from "../shared/types";
 
-export const HIGHLIGHT_CLASS_NAME = "judol-detector-highlight";
+import {
+  DETECTOR_ELEMENT_ATTRIBUTE,
+  HIGHLIGHT_CLASS_NAME,
+} from "./domConstants";
 
 function createHighlightElement(
   match: TextMatch,
@@ -15,6 +18,7 @@ function createHighlightElement(
   const span = document.createElement("span");
 
   span.className = HIGHLIGHT_CLASS_NAME;
+  span.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "highlight");
   span.textContent = text;
 
   span.dataset.keyword = match.keyword;

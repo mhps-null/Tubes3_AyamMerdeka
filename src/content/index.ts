@@ -6,6 +6,7 @@ import { clearExistingHighlights, highlightMatches } from "./highlighter";
 import { attachTooltipListeners, clearTooltip } from "./tooltip";
 import { buildStoredPageScanStatistics } from "../shared/statistics";
 import { saveScanStatistics } from "./statisticsStorage";
+import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
 
 /**
  * Content Script Entry Point
@@ -35,7 +36,7 @@ function getDocumentBody(): HTMLElement | null {
 }
 
 function injectHighlightStyle(): void {
-  const styleId = "judol-detector-style";
+  const styleId = STYLE_ELEMENT_ID;
 
   if (document.getElementById(styleId) !== null) {
     return;
@@ -43,6 +44,7 @@ function injectHighlightStyle(): void {
 
   const style = document.createElement("style");
   style.id = styleId;
+  style.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "style");
   style.textContent = `
   .judol-detector-highlight {
     background-color: yellow;

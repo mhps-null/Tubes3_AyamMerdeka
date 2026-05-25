@@ -1,6 +1,8 @@
-import { HIGHLIGHT_CLASS_NAME } from "./highlighter";
-
-const TOOLTIP_ID = "judol-detector-tooltip";
+import {
+  DETECTOR_ELEMENT_ATTRIBUTE,
+  HIGHLIGHT_CLASS_NAME,
+  TOOLTIP_ID,
+} from "./domConstants";
 
 function removeExistingTooltip(): void {
   const existingTooltip = document.getElementById(TOOLTIP_ID);
@@ -14,6 +16,7 @@ function createTooltipElement(target: HTMLElement): HTMLDivElement {
   const tooltip = document.createElement("div");
 
   tooltip.id = TOOLTIP_ID;
+  tooltip.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "tooltip");
   tooltip.className = "judol-detector-tooltip";
 
   const keyword = target.dataset.keyword ?? "-";
