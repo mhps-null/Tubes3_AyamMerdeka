@@ -3,7 +3,7 @@
   "name": "Judol Detector AyamMerdeka",
   "version": "1.0.0",
   "description": "Chromium extension for detecting online gambling content using pattern matching algorithms.",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup.html"

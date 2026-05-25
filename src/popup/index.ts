@@ -17,6 +17,12 @@ function getElementById(id: string): HTMLElement {
   return element;
 }
 
+function getActiveTabUrl(callback: (url: string | undefined) => void): void {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    callback(tabs[0]?.url);
+  });
+}
+
 function formatExecutionTime(timeMs: number): string {
   return `${timeMs.toFixed(3)} ms`;
 }
@@ -121,26 +127,55 @@ function renderStatistics(statistics: StoredPageScanStatistics): void {
 
 function renderEmptyState(): void {
   getElementById("total-matches").textContent = "0";
-  getElementById("page-title").textContent = "Belum ada data scan.";
-  getElementById("page-url").textContent = "Buka halaman web lalu refresh.";
+  getElementById("page-title").textContent =
+    "Belum ada data untuk halaman ini.";
+  getElementById("page-url").textContent =
+    "Klik Rescan Page untuk scan tab aktif.";
   getElementById("updated-at").textContent = "-";
 
   renderAlgorithmStats([]);
   renderKeywordStats([]);
 }
 
+function renderNoMatchState(statistics: StoredPageScanStatistics): void {
+  getElementById("total-matches").textContent = "0";
+  getElementById("page-title").textContent = statistics.pageTitle;
+  getElementById("page-url").textContent = statistics.pageUrl;
+  getElementById("updated-at").textContent = `Updated: ${new Date(
+    statistics.updatedAt,
+  ).toLocaleString()}`;
+
+  setRescanStatus("Page scanned. No keywords detected.");
+
+  renderAlgorithmStats(statistics.algorithmStatistics);
+  renderKeywordStats([]);
+}
+
 function loadAndRenderStatistics(): void {
-  chrome.storage.local.get([SCAN_STATISTICS_STORAGE_KEY], (result) => {
-    const statistics = result[SCAN_STATISTICS_STORAGE_KEY] as
-      | StoredPageScanStatistics
-      | undefined;
+  getActiveTabUrl((activeTabUrl) => {
+    chrome.storage.local.get([SCAN_STATISTICS_STORAGE_KEY], (result) => {
+      const statistics = result[SCAN_STATISTICS_STORAGE_KEY] as
+        | StoredPageScanStatistics
+        | undefined;
 
-    if (statistics === undefined) {
-      renderEmptyState();
-      return;
-    }
+      if (statistics === undefined) {
+        renderEmptyState();
+        return;
+      }
 
-    renderStatistics(statistics);
+      if (activeTabUrl !== undefined && statistics.pageUrl !== activeTabUrl) {
+        renderEmptyState();
+        setRescanStatus("Current page has not been scanned yet.");
+        return;
+      }
+
+      if (statistics.totalMatches === 0) {
+        renderNoMatchState(statistics);
+        return;
+      }
+
+      renderStatistics(statistics);
+    });
   });
 }
 
