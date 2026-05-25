@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Layout Safety Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 900px;
+        margin: 32px auto;
+      }
+
+      .navbar {
+        display: flex;
+        gap: 16px;
+        padding: 12px;
+        border: 1px solid #ddd;
+      }
+
+      .card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Layout Safety Test</h1>
+
+    <nav class="navbar">
+      <a href="#">Home SLOT99</a>
+      <a href="#">Promo MAXWIN138</a>
+      <a href="#">Kontak</a>
+    </nav>
+
+    <div class="card">
+      <p>
+        Ini paragraf dengan teks inline GACOR777 di tengah kalimat. Highlight
+        tidak boleh membuat layout pecah.
+      </p>
+    </div>
+
+    <div class="grid">
+      <div class="card">Card 1 SLOT99</div>
+      <div class="card">Card 2 MAXWIN234</div>
+      <div class="card">Card 3 HOKI88</div>
+    </div>
+  </body>
+</html>

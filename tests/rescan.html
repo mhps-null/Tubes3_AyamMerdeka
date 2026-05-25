@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Manual Rescan Test</title>
+  </head>
+  <body>
+    <h1>Manual Rescan Test</h1>
+
+    <p>Konten awal: SLOT99.</p>
+
+    <button id="add-content-button">Tambah Konten Baru</button>
+    <button id="replace-content-button">Ganti Konten</button>
+
+    <div id="dynamic-content"></div>
+
+    <script>
+      const dynamicContent = document.getElementById("dynamic-content");
+
+      document
+        .getElementById("add-content-button")
+        .addEventListener("click", () => {
+          const p = document.createElement("p");
+          p.textContent = "Konten baru: MAXWIN234 dan GACOR88.";
+          dynamicContent.appendChild(p);
+        });
+
+      document
+        .getElementById("replace-content-button")
+        .addEventListener("click", () => {
+          dynamicContent.innerHTML =
+            "<p>Konten diganti: HOKI88 dan LIVE22.</p>";
+        });
+    </script>
+  </body>
+</html>

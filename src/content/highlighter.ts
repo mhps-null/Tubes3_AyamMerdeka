@@ -21,7 +21,8 @@ function createHighlightElement(
   span.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "highlight");
   span.textContent = text;
 
-  span.dataset.keyword = match.keyword;
+  span.dataset.keyword = text;
+  span.dataset.searchKeyword = match.keyword;
   span.dataset.algorithm = match.algorithm;
   span.dataset.occurrenceCount = String(occurrenceCount);
   span.dataset.executionTimeMs = executionTimeMs.toFixed(3);

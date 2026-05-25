@@ -37,11 +37,13 @@ function createTooltipElement(target: HTMLElement): HTMLDivElement {
   tooltip.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "tooltip");
 
   const keyword = target.dataset.keyword ?? "-";
+  const searchKeyword = target.dataset.searchKeyword ?? "-";
   const algorithm = target.dataset.algorithm ?? "-";
   const occurrenceCount = target.dataset.occurrenceCount ?? "1";
   const executionTimeMs = target.dataset.executionTimeMs ?? "0";
 
   tooltip.appendChild(createTooltipRow("Keyword", keyword));
+  tooltip.appendChild(createTooltipRow("Search key", searchKeyword));
   tooltip.appendChild(createTooltipRow("Algorithm", algorithm));
   tooltip.appendChild(createTooltipRow("Occurrences", occurrenceCount));
   tooltip.appendChild(createTooltipRow("Execution", `${executionTimeMs} ms`));

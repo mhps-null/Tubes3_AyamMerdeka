@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ignored Elements Test</title>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Ignored Elements Test</h1>
+
+    <p>Yang ini harus terdeteksi: SLOT99 dan MAXWIN138.</p>
+
+    <input value="SLOT99 di input tidak boleh discan" />
+
+    <textarea>MAXWIN138 di textarea tidak boleh discan</textarea>
+
+    <p class="hidden">GACOR777 hidden tidak boleh discan.</p>
+
+    <p aria-hidden="true">HOKI88 aria-hidden tidak boleh discan.</p>
+
+    <script>
+      const ignored = "LIVE22 di script tidak boleh discan";
+    </script>
+
+    <style>
+      .fake::after {
+        content: "GACOR88 di style tidak boleh discan";
+      }
+    </style>
+  </body>
+</html>
