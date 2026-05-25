@@ -49,25 +49,27 @@ function injectHighlightStyle(): void {
   style.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "style");
   style.textContent = `
   .judol-detector-highlight {
-    background-color: yellow;
+    background: #fff3a3;
     color: inherit;
-    border-radius: 3px;
-    padding: 0 2px;
+    border-radius: 4px;
+    padding: 0 3px;
+    box-shadow: inset 0 -2px 0 #facc15;
     cursor: help;
   }
 
   .judol-detector-tooltip {
     position: fixed;
     z-index: 2147483647;
-    background: #111;
-    color: #fff;
+    background: #111827;
+    color: #f9fafb;
     font-size: 12px;
-    line-height: 1.4;
-    padding: 8px 10px;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    line-height: 1.45;
+    padding: 9px 11px;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
     pointer-events: none;
-    max-width: 260px;
+    max-width: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 `;
 
