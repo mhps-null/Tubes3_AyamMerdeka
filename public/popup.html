@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Judol Detector</title>
+    <style>
+      body {
+        width: 340px;
+        margin: 0;
+        padding: 14px;
+        font-family: Arial, sans-serif;
+        background: #f7f7f7;
+        color: #111;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin: 0 0 10px;
+      }
+
+      .card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      .muted {
+        color: #666;
+        font-size: 12px;
+        word-break: break-word;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 6px 0;
+        font-size: 13px;
+      }
+
+      .stat strong {
+        text-align: right;
+      }
+
+      .bar-row {
+        margin: 8px 0;
+      }
+
+      .bar-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 3px;
+      }
+
+      .bar-track {
+        height: 8px;
+        background: #e5e5e5;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        height: 100%;
+        background: #ffd84d;
+        border-radius: 999px;
+      }
+
+      .empty {
+        font-size: 13px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Judol Detector</h1>
+
+    <div class="card">
+      <div class="stat">
+        <span>Total match</span>
+        <strong id="total-matches">-</strong>
+      </div>
+      <div class="muted" id="page-title">-</div>
+      <div class="muted" id="page-url">-</div>
+      <div class="muted" id="updated-at">-</div>
+    </div>
+
+    <div class="card">
+      <strong>Match per Algoritma</strong>
+      <div id="algorithm-stats"></div>
+    </div>
+
+    <div class="card">
+      <strong>Perbandingan Keyword</strong>
+      <div id="keyword-stats"></div>
+    </div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

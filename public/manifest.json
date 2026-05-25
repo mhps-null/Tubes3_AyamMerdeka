@@ -5,6 +5,9 @@
   "description": "Chromium extension for detecting online gambling content using pattern matching algorithms.",
   "permissions": ["storage"],
   "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

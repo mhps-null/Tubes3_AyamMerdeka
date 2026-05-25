@@ -7,13 +7,14 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        content: resolve("src/content.ts")
+        content: resolve("src/content/index.ts"),
+        popup: resolve("src/popup/index.ts"),
       },
       output: {
         entryFileNames: "[name].js",
         chunkFileNames: "chunks/[name].js",
-        assetFileNames: "assets/[name][extname]"
-      }
-    }
-  }
+        assetFileNames: "assets/[name][extname]",
+      },
+    },
+  },
 });
