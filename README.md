@@ -117,7 +117,6 @@ dist/
 1. Jalankan `npm run build`.
 2. Buka halaman extension browser:
    - Chrome/Chromium: `chrome://extensions/`
-   - Brave: `brave://extensions/`
 3. Aktifkan `Developer mode`.
 4. Klik `Load unpacked`.
 5. Pilih folder `dist/`.
