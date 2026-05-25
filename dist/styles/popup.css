@@ -86,3 +86,27 @@ button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.popup-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.popup-header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.popup-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #666;
+}
