@@ -4,6 +4,8 @@ import {
   TOOLTIP_ID,
 } from "./domConstants";
 
+const TOOLTIP_OFFSET_PX = 12;
+
 function removeExistingTooltip(): void {
   const existingTooltip = document.getElementById(TOOLTIP_ID);
 
@@ -12,33 +14,60 @@ function removeExistingTooltip(): void {
   }
 }
 
+function createTooltipRow(label: string, value: string): HTMLDivElement {
+  const row = document.createElement("div");
+
+  const labelElement = document.createElement("strong");
+  labelElement.textContent = `${label}: `;
+
+  const valueElement = document.createElement("span");
+  valueElement.textContent = value;
+
+  row.appendChild(labelElement);
+  row.appendChild(valueElement);
+
+  return row;
+}
+
 function createTooltipElement(target: HTMLElement): HTMLDivElement {
   const tooltip = document.createElement("div");
 
   tooltip.id = TOOLTIP_ID;
-  tooltip.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "tooltip");
   tooltip.className = "judol-detector-tooltip";
+  tooltip.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "tooltip");
 
   const keyword = target.dataset.keyword ?? "-";
   const algorithm = target.dataset.algorithm ?? "-";
   const occurrenceCount = target.dataset.occurrenceCount ?? "1";
   const executionTimeMs = target.dataset.executionTimeMs ?? "0";
 
-  tooltip.innerHTML = `
-    <div><strong>Keyword:</strong> ${keyword}</div>
-    <div><strong>Algorithm:</strong> ${algorithm}</div>
-    <div><strong>Occurrences:</strong> ${occurrenceCount}</div>
-    <div><strong>Execution:</strong> ${executionTimeMs} ms</div>
-  `;
+  tooltip.appendChild(createTooltipRow("Keyword", keyword));
+  tooltip.appendChild(createTooltipRow("Algorithm", algorithm));
+  tooltip.appendChild(createTooltipRow("Occurrences", occurrenceCount));
+  tooltip.appendChild(createTooltipRow("Execution", `${executionTimeMs} ms`));
 
   return tooltip;
 }
 
 function positionTooltip(tooltip: HTMLElement, event: MouseEvent): void {
-  const offset = 12;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
 
-  tooltip.style.left = `${event.clientX + offset}px`;
-  tooltip.style.top = `${event.clientY + offset}px`;
+  const tooltipRect = tooltip.getBoundingClientRect();
+
+  let left = event.clientX + TOOLTIP_OFFSET_PX;
+  let top = event.clientY + TOOLTIP_OFFSET_PX;
+
+  if (left + tooltipRect.width > viewportWidth) {
+    left = event.clientX - tooltipRect.width - TOOLTIP_OFFSET_PX;
+  }
+
+  if (top + tooltipRect.height > viewportHeight) {
+    top = event.clientY - tooltipRect.height - TOOLTIP_OFFSET_PX;
+  }
+
+  tooltip.style.left = `${Math.max(0, left)}px`;
+  tooltip.style.top = `${Math.max(0, top)}px`;
 }
 
 export function attachTooltipListeners(): void {

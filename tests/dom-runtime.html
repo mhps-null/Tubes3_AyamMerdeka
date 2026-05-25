@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>DOM Runtime Test - Judol Detector</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 32px auto;
+        line-height: 1.6;
+      }
+
+      .box {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DOM Runtime Test</h1>
+
+    <div class="box">
+      <h2>1. Regex Match</h2>
+      <p>SLOT99 harus ter-highlight.</p>
+      <p>MAXWIN138 harus ter-highlight.</p>
+      <p>GACOR777 dan HOKI88 juga harus ter-highlight.</p>
+    </div>
+
+    <div class="box">
+      <h2>2. Banyak Match dalam Satu Text Node</h2>
+      <p>SLOT99 MAXWIN138 GACOR777 HOKI88 LIVE22 berada dalam satu paragraf.</p>
+    </div>
+
+    <div class="box">
+      <h2>3. Exact Match Nanti</h2>
+      <p>
+        slot dan gacor tanpa angka baru akan aktif kalau KMP/BM sudah
+        diimplementasi.
+      </p>
+    </div>
+
+    <div class="box">
+      <h2>4. Ignored Elements</h2>
+
+      <input value="SLOT99 di input tidak boleh discan" />
+
+      <textarea>MAXWIN138 di textarea tidak boleh discan</textarea>
+
+      <p class="hidden">GACOR777 hidden tidak boleh discan.</p>
+
+      <p aria-hidden="true">HOKI88 aria-hidden tidak boleh discan.</p>
+
+      <script>
+        const ignoredScriptText = "SLOT99 di script tidak boleh discan";
+      </script>
+
+      <style>
+        .fake::after {
+          content: "MAXWIN138 di style tidak boleh discan";
+        }
+      </style>
+    </div>
+
+    <div class="box">
+      <h2>5. Manual Rescan Test</h2>
+      <button id="add-content-button">Tambah Konten Baru</button>
+      <button id="change-content-button">Ubah Konten Lama</button>
+
+      <div id="dynamic-content">
+        <p>Konten awal: SLOT99.</p>
+      </div>
+    </div>
+
+    <script>
+      const dynamicContent = document.getElementById("dynamic-content");
+
+      document
+        .getElementById("add-content-button")
+        .addEventListener("click", () => {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = "Konten baru: MAXWIN234 dan GACOR88.";
+          dynamicContent.appendChild(paragraph);
+        });
+
+      document
+        .getElementById("change-content-button")
+        .addEventListener("click", () => {
+          dynamicContent.innerHTML =
+            "<p>Konten sudah berubah: LIVE22 dan HOKI777.</p>";
+        });
+    </script>
+  </body>
+</html>
