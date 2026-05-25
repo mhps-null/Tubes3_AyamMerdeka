@@ -5,6 +5,7 @@ import type {
 } from "../shared/types";
 
 const SCAN_STATISTICS_STORAGE_KEY = "judolDetectorScanStatistics";
+const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
 
 function getElementById(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -18,6 +19,20 @@ function getElementById(id: string): HTMLElement {
 
 function formatExecutionTime(timeMs: number): string {
   return `${timeMs.toFixed(3)} ms`;
+}
+
+function getButtonById(id: string): HTMLButtonElement {
+  const element = document.getElementById(id);
+
+  if (!(element instanceof HTMLButtonElement)) {
+    throw new Error(`Button with id "${id}" not found.`);
+  }
+
+  return element;
+}
+
+function setRescanStatus(message: string): void {
+  getElementById("rescan-status").textContent = message;
 }
 
 function renderAlgorithmStats(summaries: AlgorithmScanSummary[]): void {
@@ -114,17 +129,62 @@ function renderEmptyState(): void {
   renderKeywordStats([]);
 }
 
-chrome.storage.local.get([SCAN_STATISTICS_STORAGE_KEY], (result) => {
-  const statistics = result[SCAN_STATISTICS_STORAGE_KEY] as
-    | StoredPageScanStatistics
-    | undefined;
+function loadAndRenderStatistics(): void {
+  chrome.storage.local.get([SCAN_STATISTICS_STORAGE_KEY], (result) => {
+    const statistics = result[SCAN_STATISTICS_STORAGE_KEY] as
+      | StoredPageScanStatistics
+      | undefined;
 
-  if (statistics === undefined) {
-    renderEmptyState();
-    return;
-  }
+    if (statistics === undefined) {
+      renderEmptyState();
+      return;
+    }
 
-  renderStatistics(statistics);
-});
+    renderStatistics(statistics);
+  });
+}
+
+function attachRescanButtonListener(): void {
+  const rescanButton = getButtonById("rescan-button");
+
+  rescanButton.addEventListener("click", () => {
+    rescanButton.disabled = true;
+    setRescanStatus("Rescanning...");
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const activeTab = tabs[0];
+
+      if (activeTab?.id === undefined) {
+        rescanButton.disabled = false;
+        setRescanStatus("No active tab found.");
+        return;
+      }
+
+      chrome.tabs.sendMessage(
+        activeTab.id,
+        { type: RESCAN_MESSAGE_TYPE },
+        (response?: { ok: boolean; error?: string }) => {
+          rescanButton.disabled = false;
+
+          if (chrome.runtime.lastError) {
+            setRescanStatus("Cannot rescan this page.");
+            return;
+          }
+
+          if (response?.ok !== true) {
+            setRescanStatus(response?.error ?? "Rescan failed.");
+            return;
+          }
+
+          setRescanStatus("Rescan completed.");
+          loadAndRenderStatistics();
+        },
+      );
+    });
+  });
+}
+
+loadAndRenderStatistics();
+attachRescanButtonListener();
 
 export {};

@@ -17,6 +17,8 @@ import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
  */
 
 const EXTENSION_LOG_PREFIX = "[Judol Detector AyamMerdeka]";
+const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
+let isScanning = false;
 
 function logInfo(message: string, data?: unknown): void {
   if (data === undefined) {
@@ -72,70 +74,104 @@ function injectHighlightStyle(): void {
   document.documentElement.appendChild(style);
 }
 
-async function runDetector(): Promise<void> {
-  const body = getDocumentBody();
-
-  if (body === null) {
-    logInfo("document.body not found. Detector skipped.");
+async function rescanPage(reason: string): Promise<void> {
+  if (isScanning) {
+    logInfo("Scan skipped because another scan is running.");
     return;
   }
 
-  clearExistingHighlights();
-  clearTooltip();
-  injectHighlightStyle();
+  isScanning = true;
 
-  logInfo("Content script loaded.");
-  logInfo("Current page title:", document.title);
-  logInfo("Current page URL:", window.location.href);
+  try {
+    const body = getDocumentBody();
 
-  const keywords = await loadKeywords();
-  const textTargets = collectTextScanTargets(body);
+    if (body === null) {
+      logInfo("document.body not found. Detector skipped.");
+      return;
+    }
 
-  logInfo("Keywords loaded:", keywords);
+    clearExistingHighlights();
+    clearTooltip();
+    injectHighlightStyle();
 
-  logInfo("Text scan targets found:", textTargets.length);
-  logInfo(
-    "Text scan target samples:",
-    textTargets.slice(0, 5).map((target) => ({
-      id: target.id,
-      tag: target.parentElement.tagName.toLowerCase(),
-      text: target.text.trim(),
-      normalizedText: target.normalizedText.trim(),
-    })),
-  );
+    logInfo("Content script loaded.");
+    logInfo("Scan reason:", reason);
+    logInfo("Current page title:", document.title);
+    logInfo("Current page URL:", window.location.href);
 
-  const scanResult = scanPageTargets(textTargets, keywords);
+    const keywords = await loadKeywords();
+    const textTargets = collectTextScanTargets(body);
 
-  logInfo("Scan summaries:", scanResult.summaries);
-  logInfo("Total matches found:", scanResult.matches.length);
-  logInfo("Match samples:", scanResult.matches.slice(0, 10));
+    logInfo("Keywords loaded:", keywords);
+    logInfo("Text scan targets found:", textTargets.length);
+    logInfo(
+      "Text scan target samples:",
+      textTargets.slice(0, 5).map((target) => ({
+        id: target.id,
+        tag: target.parentElement.tagName.toLowerCase(),
+        text: target.text.trim(),
+        normalizedText: target.normalizedText.trim(),
+      })),
+    );
 
-  const matchesForHighlight = resolveMatchesForHighlight(scanResult.matches);
+    const scanResult = scanPageTargets(textTargets, keywords);
 
-  logInfo("Resolved matches for highlight:", matchesForHighlight.length);
-  logInfo("Resolved match samples:", matchesForHighlight.slice(0, 10));
+    logInfo("Scan summaries:", scanResult.summaries);
+    logInfo("Total matches found:", scanResult.matches.length);
+    logInfo("Match samples:", scanResult.matches.slice(0, 10));
 
-  const highlightedTargetCount = highlightMatches(
-    textTargets,
-    matchesForHighlight,
-    scanResult.summaries,
-  );
+    const matchesForHighlight = resolveMatchesForHighlight(scanResult.matches);
 
-  attachTooltipListeners();
+    logInfo("Resolved matches for highlight:", matchesForHighlight.length);
+    logInfo("Resolved match samples:", matchesForHighlight.slice(0, 10));
 
-  const storedStatistics = buildStoredPageScanStatistics(
-    scanResult.matches,
-    scanResult.summaries,
-  );
+    const highlightedTargetCount = highlightMatches(
+      textTargets,
+      matchesForHighlight,
+      scanResult.summaries,
+    );
 
-  await saveScanStatistics(storedStatistics);
+    attachTooltipListeners();
 
-  logInfo("Highlighted text targets:", highlightedTargetCount);
-  logInfo("Scan statistics saved:", storedStatistics);
+    const storedStatistics = buildStoredPageScanStatistics(
+      scanResult.matches,
+      scanResult.summaries,
+    );
+
+    await saveScanStatistics(storedStatistics);
+
+    logInfo("Highlighted text targets:", highlightedTargetCount);
+    logInfo("Scan statistics saved:", storedStatistics);
+  } finally {
+    isScanning = false;
+  }
 }
 
-runDetector().catch((error: unknown) => {
-  logError("Failed to run detector.", error);
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== RESCAN_MESSAGE_TYPE) {
+    return false;
+  }
+
+  rescanPage("manual-rescan")
+    .then(() => {
+      sendResponse({
+        ok: true,
+      });
+    })
+    .catch((error: unknown) => {
+      logError("Failed to handle manual rescan.", error);
+
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
+  return true;
+});
+
+rescanPage("initial-load").catch((error: unknown) => {
+  logError("Failed to scan page.", error);
 });
 
 export {};
