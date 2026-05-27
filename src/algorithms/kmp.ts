@@ -11,7 +11,7 @@ import type { TextMatch } from "../shared/types";
 
 function computeBorder(pattern: string): number[] {
   const m = pattern.length;
-  const b: number[] = new Array(m).fill(0);
+  const b: number[] = new Array(m).fill(0); // border/failure function array
   
   let i = 1; // iterator teks (pattern itu sendiri)
   let j = 0; // panjang prefix yang cocok
@@ -59,7 +59,7 @@ export function kmpSearch(
         const startIndex = i - m + 1;
         const endIndex = startIndex + m;
         
-        // Ambil teks asli yang belum dinormalisasi untuk highlight
+        // Ambil teks yang cocok
         const matchedText = text.substring(startIndex, endIndex);
 
         results.push({
