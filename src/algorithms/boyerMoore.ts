@@ -65,10 +65,16 @@ export function boyerMooreSearch(
         i = i + m; 
         j = m - 1;
       } else {
+        // Cocok, lanjutkan ke karakter berikutnya (ke kiri)
         i--;
         j--;
       }
     } else {
+      // Tidak cocok
+      // i = indeks teks missmatch ; lo = last occurence ; j = indeks keyword missmatch
+      // Kasus 1: lo < j, maka (lo + 1) <= j, geser sejauh (j-lo)
+      // Kasus 2: lo >= j, maka (lo + 1) > j, geser sejauh 1
+      // Kasus 3: lo = -1, maka (lo + 1) = 0 > j, geser sejauh m
       const charInText = text[i];
       const lo = last.has(charInText) ? last.get(charInText)! : -1;
       i = i + m - Math.min(j, 1 + lo);

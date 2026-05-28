@@ -18,13 +18,15 @@ function computeBorder(pattern: string): number[] {
 
   while (i < m) {
     if (pattern[j] === pattern[i]) {
+      // Cocok, maka perpanjang border
       b[i] = j + 1;
       i++;
       j++;
     } else if (j > 0) {
+      // Tidak cocok, kembali ke subborder untuk coba memperpanjang
       j = b[j - 1];
     } else {
-      b[i] = 0;
+      // Tidak cocok dan tidak ada border yang bisa diperpanjang, lanjut ke karakter berikutnya
       i++;
     }
   }
@@ -56,6 +58,7 @@ export function kmpSearch(
     // Bandingkan
     if (keyword[j] === text[i]) {
       if (j === m - 1) {
+        // Ditemukan kecocokan penuh
         const startIndex = i - m + 1;
         const endIndex = startIndex + m;
         
@@ -72,15 +75,19 @@ export function kmpSearch(
           comparisons: comparisons,
         } as TextMatch);
 
+        // Menangani overlap match, menggeser keyword sesuai border
         j = b[j]; 
         i++;
       } else {
+        // Cocok, lanjutkan ke karakter berikutnya
         i++;
         j++;
       }
     } else if (j > 0) {
+      // Tidak cocok, geser keyword sesuai border dan mulai pengecekan pada indeks yang sudah ditentukan
       j = b[j - 1];
     } else {
+      // Tidak cocok, lanjut ke karakter berikutnya
       i++;
     }
   }
