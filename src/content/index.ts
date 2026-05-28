@@ -6,7 +6,6 @@ import { clearExistingHighlights, highlightMatches } from "./highlighter";
 import { attachTooltipListeners, clearTooltip } from "./tooltip";
 import { buildStoredPageScanStatistics } from "../shared/statistics";
 import { saveScanStatistics } from "./statisticsStorage";
-import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
 
 /**
  * Content Script Entry Point
@@ -18,6 +17,7 @@ import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
 
 const EXTENSION_LOG_PREFIX = "[Judol Detector AyamMerdeka]";
 const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
+const SETTINGS_STORAGE_KEY = "judolDetectorSettings";
 let isScanning = false;
 
 function logInfo(message: string, data?: unknown): void {
@@ -37,43 +37,41 @@ function getDocumentBody(): HTMLElement | null {
   return document.body;
 }
 
-function injectHighlightStyle(): void {
-  const styleId = STYLE_ELEMENT_ID;
+function applyBlurState(isBlurActive: boolean): void {
+  const body = getDocumentBody();
+  if (body === null) return;
 
-  if (document.getElementById(styleId) !== null) {
-    return;
+  if (isBlurActive) {
+    body.classList.add("judol-blur-active");
+  } else {
+    body.classList.remove("judol-blur-active");
   }
+}
 
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "style");
-  style.textContent = `
-  .judol-detector-highlight {
-    background: #fff3a3;
-    color: inherit;
-    border-radius: 4px;
-    padding: 0 3px;
-    box-shadow: inset 0 -2px 0 #facc15;
-    cursor: help;
-  }
+function loadInitialSettings(): void {
+  chrome.storage.local.get([SETTINGS_STORAGE_KEY], (result) => {
+    const settings = result[SETTINGS_STORAGE_KEY] as { isBlurActive?: boolean } | undefined;
+    const isBlurActive = settings?.isBlurActive ?? true;
+    applyBlurState(isBlurActive);
+  });
+}
 
-  .judol-detector-tooltip {
-    position: fixed;
-    z-index: 2147483647;
-    background: #111827;
-    color: #f9fafb;
-    font-size: 12px;
-    line-height: 1.45;
-    padding: 9px 11px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-    pointer-events: none;
-    max-width: 280px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-`;
+function attachClickInterceptor(): void {
+  document.addEventListener("click", (event: MouseEvent) => {
+    const body = getDocumentBody();
+    if (body === null || !body.classList.contains("judol-blur-active")) {
+      return;
+    }
 
-  document.documentElement.appendChild(style);
+    const target = event.target as HTMLElement;
+    
+    if (target.closest(".judol-blur-target")) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      console.warn("Judol Detector: Tautan diblokir demi keamanan.");
+    }
+  }, true); 
 }
 
 async function rescanPage(reason: string): Promise<void> {
@@ -94,7 +92,6 @@ async function rescanPage(reason: string): Promise<void> {
 
     clearExistingHighlights();
     clearTooltip();
-    injectHighlightStyle();
 
     logInfo("Content script loaded.");
     logInfo("Scan reason:", reason);
@@ -171,6 +168,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   return true;
 });
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+
+  if (SETTINGS_STORAGE_KEY in changes) {
+    const newSettings = changes[SETTINGS_STORAGE_KEY].newValue as { isBlurActive?: boolean } | undefined;
+    const isBlurActive = newSettings?.isBlurActive ?? true;
+    applyBlurState(isBlurActive);
+  }
+});
+
+loadInitialSettings();
+attachClickInterceptor();
 
 rescanPage("initial-load").catch((error: unknown) => {
   logError("Failed to scan page.", error);

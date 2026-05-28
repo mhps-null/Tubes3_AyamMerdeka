@@ -6,6 +6,7 @@ import type {
 
 const SCAN_STATISTICS_STORAGE_KEY = "judolDetectorScanStatistics";
 const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
+const SETTINGS_STORAGE_KEY = "judolDetectorSettings";
 
 function getElementById(id: string): HTMLElement {
   const element = document.getElementById(id);
@@ -242,8 +243,30 @@ function attachRescanButtonListener(): void {
   });
 }
 
+function attachBlurToggleListener(): void {
+  const blurToggle = document.getElementById("blur-toggle");
+
+  if (!(blurToggle instanceof HTMLInputElement)) {
+    return;
+  }
+
+  chrome.storage.local.get([SETTINGS_STORAGE_KEY], (result) => {
+    const settings = result[SETTINGS_STORAGE_KEY] as { isBlurActive?: boolean } | undefined;
+    blurToggle.checked = settings?.isBlurActive ?? true; 
+  });
+
+  blurToggle.addEventListener("change", () => {
+    const isBlurActive = blurToggle.checked;
+    
+    chrome.storage.local.set({
+      [SETTINGS_STORAGE_KEY]: { isBlurActive: isBlurActive },
+    });
+  });
+}
+
 loadAndRenderStatistics();
 attachStorageChangeListener();
 attachRescanButtonListener();
+attachBlurToggleListener();
 
 export {};

@@ -1,0 +1,33 @@
+.judol-detector-highlight {
+  background: #fff3a3;
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 3px;
+  box-shadow: inset 0 -2px 0 #facc15;
+  cursor: help;
+}
+
+.judol-detector-tooltip {
+  position: fixed;
+  z-index: 2147483647;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 9px 11px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  max-width: 280px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.judol-blur-active .judol-blur-target {
+  filter: blur(6px) grayscale(100%);
+  user-select: none;
+  transition: filter 0.3s ease-in-out;
+}
+
+body.judol-blur-active .judol-blur-target:hover {
+  filter: blur(2.5px) grayscale(0%);
+}
