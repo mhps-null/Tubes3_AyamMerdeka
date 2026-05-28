@@ -4,7 +4,7 @@ import {
   TOOLTIP_ID,
 } from "./domConstants";
 import { normalizeTextForMatching } from "../shared/textNormalizer";
-import type { TextScanTarget } from "../shared/types";
+import type { TextScanTarget, ImageScanTarget } from "../shared/types";
 
 const IGNORED_TAG_NAMES = new Set([
   "script",
@@ -155,6 +155,32 @@ export function collectTextScanTargets(root: Node): TextScanTarget[] {
     }
 
     currentNode = walker.nextNode();
+  }
+
+  return targets;
+}
+
+export function collectImageTargets(rootNode: HTMLElement): ImageScanTarget[] {
+  const images = rootNode.querySelectorAll("img");
+  const targets: ImageScanTarget[] = [];
+  let imageIdCounter = 1;
+
+  for (const img of images) {
+    const src = img.src || img.dataset.src;
+
+    if (!src) continue;
+
+    if (src.toLowerCase().includes(".gif")) continue;
+
+    const rect = img.getBoundingClientRect();
+    if (rect.width > 0 && rect.width < 50) continue;
+    if (rect.height > 0 && rect.height < 50) continue;
+
+    targets.push({
+      id: imageIdCounter++,
+      node: img,
+      src: src,
+    });
   }
 
   return targets;

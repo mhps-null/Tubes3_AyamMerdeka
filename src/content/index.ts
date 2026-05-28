@@ -6,6 +6,9 @@ import { clearExistingHighlights, highlightMatches } from "./highlighter";
 import { attachTooltipListeners, clearTooltip } from "./tooltip";
 import { buildStoredPageScanStatistics } from "../shared/statistics";
 import { saveScanStatistics } from "./statisticsStorage";
+import { collectImageTargets } from "./domScanner";
+import { extractTextFromImage } from "./ocrProcessor";
+import { censorImageTarget, clearImageCensors } from "./imageCensor";
 
 /**
  * Content Script Entry Point
@@ -19,6 +22,7 @@ const EXTENSION_LOG_PREFIX = "[Judol Detector AyamMerdeka]";
 const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
 const SETTINGS_STORAGE_KEY = "judolDetectorSettings";
 let isScanning = false;
+let isOcrActive = false;
 
 function logInfo(message: string, data?: unknown): void {
   if (data === undefined) {
@@ -74,10 +78,70 @@ function attachClickInterceptor(): void {
   }, true); 
 }
 
-async function rescanPage(reason: string): Promise<void> {
+async function runBackgroundOCR(imageTargets: any[], keywords: string[], currentScanResult: any) {
+  isOcrActive = true;
+  try {
+    logInfo(`[Background] Scanning ${imageTargets.length} images`);
+  
+    for (const imgTarget of imageTargets) {
+      logInfo(`[Background] Processing OCR for image ID: ${imgTarget.id}`);
+      const ocrText = await extractTextFromImage(imgTarget.src);
+
+      if (!ocrText || ocrText.trim() === "") continue;
+
+      logInfo(`[Background] OCR text from image ${imgTarget.id}:`, ocrText);
+
+      const mockTextNode = document.createTextNode(ocrText);
+      const mockTarget = {
+        id: -imgTarget.id, 
+        node: mockTextNode,
+        parentElement: imgTarget.node,
+        text: ocrText,
+        normalizedText: ocrText.toLowerCase().replace(/\s+/g, ' '),
+      };
+
+      const imgScanResult = scanPageTargets([mockTarget], keywords);
+
+      if (imgScanResult.matches.length > 0) {
+        logInfo(`[Background] Judol detected in image ${imgTarget.id}! Blurring image`);
+        censorImageTarget(imgTarget);
+        
+        currentScanResult.matches.push(...imgScanResult.matches);
+
+        for (const imgSummary of imgScanResult.summaries) {
+          const existingSummary = currentScanResult.summaries.find(
+            (s: any) => s.algorithm === imgSummary.algorithm
+          );
+          
+          if (existingSummary) {
+            existingSummary.matchCount += imgSummary.matchCount;
+            existingSummary.executionTimeMs += imgSummary.executionTimeMs;
+          } else {
+            currentScanResult.summaries.push(imgSummary);
+          }
+        }
+
+        const finalResolvedMatches = resolveMatchesForHighlight(currentScanResult.matches);
+        const updatedStatistics = buildStoredPageScanStatistics(
+          finalResolvedMatches, 
+          currentScanResult.summaries,
+        );
+        
+        await saveScanStatistics(updatedStatistics);
+      }
+    }
+  }
+  finally {
+    logInfo(`[Background] Finished`);
+    isOcrActive = false;
+    chrome.runtime.sendMessage({ type: "OCR_COMPLETED" }).catch(() => {});
+  }
+}
+
+async function rescanPage(reason: string): Promise<boolean> {
   if (isScanning) {
     logInfo("Scan skipped because another scan is running.");
-    return;
+    return false;
   }
 
   isScanning = true;
@@ -87,11 +151,12 @@ async function rescanPage(reason: string): Promise<void> {
 
     if (body === null) {
       logInfo("document.body not found. Detector skipped.");
-      return;
+      return false;
     }
 
     clearExistingHighlights();
     clearTooltip();
+    clearImageCensors();
 
     logInfo("Content script loaded.");
     logInfo("Scan reason:", reason);
@@ -101,72 +166,69 @@ async function rescanPage(reason: string): Promise<void> {
     const keywords = await loadKeywords();
     const textTargets = collectTextScanTargets(body);
 
-    logInfo("Keywords loaded:", keywords);
-    logInfo("Text scan targets found:", textTargets.length);
-    logInfo(
-      "Text scan target samples:",
-      textTargets.slice(0, 5).map((target) => ({
-        id: target.id,
-        tag: target.parentElement.tagName.toLowerCase(),
-        text: target.text.trim(),
-        normalizedText: target.normalizedText.trim(),
-      })),
-    );
-
     const scanResult = scanPageTargets(textTargets, keywords);
-
-    logInfo("Scan summaries:", scanResult.summaries);
-    logInfo("Total matches found:", scanResult.matches.length);
-    logInfo("Match samples:", scanResult.matches.slice(0, 10));
-
     const matchesForHighlight = resolveMatchesForHighlight(scanResult.matches);
-
-    logInfo("Resolved matches for highlight:", matchesForHighlight.length);
-    logInfo("Resolved match samples:", matchesForHighlight.slice(0, 10));
 
     const highlightedTargetCount = highlightMatches(
       textTargets,
       matchesForHighlight,
       scanResult.summaries,
     );
-
+    
     attachTooltipListeners();
 
-    const storedStatistics = buildStoredPageScanStatistics(
-      scanResult.matches,
+    const initialStatistics = buildStoredPageScanStatistics(
+      matchesForHighlight, 
       scanResult.summaries,
     );
+    await saveScanStatistics(initialStatistics);
 
-    await saveScanStatistics(storedStatistics);
+    logInfo("Start OCR");
+    const imageTargets = collectImageTargets(body);
+    logInfo("Match image targets:", imageTargets.length);
 
-    logInfo("Highlighted text targets:", highlightedTargetCount);
-    logInfo("Scan statistics saved:", storedStatistics);
+    if (imageTargets.length > 0) {
+      runBackgroundOCR(imageTargets, keywords, scanResult).catch(err => {
+        console.error("[OCR Background Error]", err);
+      });
+      return true;
+    }
+    
+    return false;    
   } finally {
     isScanning = false;
   }
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== RESCAN_MESSAGE_TYPE) {
+  if (message?.type === "CHECK_STATUS") {
+    sendResponse({ 
+      isScanning: isScanning, 
+      isOcrRunning: isOcrActive 
+    });
     return false;
   }
 
-  rescanPage("manual-rescan")
-    .then(() => {
+  if (message?.type === RESCAN_MESSAGE_TYPE) {
+    rescanPage("manual-rescan")
+    .then((isOcrRunning) => {
       sendResponse({
         ok: true,
+        isOcrRunning: isOcrRunning 
       });
     })
     .catch((error: unknown) => {
       logError("Failed to handle manual rescan.", error);
-
       sendResponse({
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       });
     });
 
-  return true;
+    return true; 
+  }
+
+  return false;
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

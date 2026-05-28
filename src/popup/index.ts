@@ -146,7 +146,7 @@ function renderNoMatchState(statistics: StoredPageScanStatistics): void {
     statistics.updatedAt,
   ).toLocaleString()}`;
 
-  setRescanStatus("Page scanned. No keywords detected.");
+  setRescanStatus("Scan selesai, tetapi tidak ditemukan kecocokan.");
 
   renderAlgorithmStats(statistics.algorithmStatistics);
   renderKeywordStats([]);
@@ -166,7 +166,7 @@ function loadAndRenderStatistics(): void {
 
       if (activeTabUrl !== undefined && statistics.pageUrl !== activeTabUrl) {
         renderEmptyState();
-        setRescanStatus("Current page has not been scanned yet.");
+        setRescanStatus("Halaman telah berpindah dan belum discan. Klik Rescan Page untuk memindai halaman baru.");
         return;
       }
 
@@ -203,6 +203,18 @@ function attachStorageChangeListener(): void {
   });
 }
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === "OCR_COMPLETED") {
+    setRescanStatus("Scan selesai.");
+    loadAndRenderStatistics();
+  }
+
+  const rescanButton = getButtonById("rescan-button");
+    if (rescanButton) {
+      rescanButton.disabled = false;
+    }
+});
+
 function attachRescanButtonListener(): void {
   const rescanButton = getButtonById("rescan-button");
 
@@ -215,27 +227,31 @@ function attachRescanButtonListener(): void {
 
       if (activeTab?.id === undefined) {
         rescanButton.disabled = false;
-        setRescanStatus("No active tab found.");
+        setRescanStatus("Tidak ditemukan tab aktif untuk discan.");
         return;
       }
 
       chrome.tabs.sendMessage(
         activeTab.id,
         { type: RESCAN_MESSAGE_TYPE },
-        (response?: { ok: boolean; error?: string }) => {
+        (response?: { ok: boolean; error?: string; isOcrRunning?: boolean }) => {
           rescanButton.disabled = false;
 
           if (chrome.runtime.lastError) {
-            setRescanStatus("Cannot rescan this page.");
+            setRescanStatus("Tidak dapat melakukan rescan pada halaman ini.");
             return;
           }
 
           if (response?.ok !== true) {
-            setRescanStatus(response?.error ?? "Rescan failed.");
+            setRescanStatus(response?.error ?? "Rescan gagal.");
             return;
           }
-
-          setRescanStatus("Rescan completed.");
+          if (response.isOcrRunning) {
+            setRescanStatus("Scan masih berjalan. OCR sedang diproses.");
+          } else {
+            setRescanStatus("Scan selesai.");
+          }
+          
           loadAndRenderStatistics();
         },
       );
@@ -263,6 +279,39 @@ function attachBlurToggleListener(): void {
     });
   });
 }
+
+function syncPopupWithCurrentState(): void {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const activeTab = tabs[0];
+    if (!activeTab?.id) return;
+
+    chrome.tabs.sendMessage(
+      activeTab.id,
+      { type: "CHECK_STATUS" },
+      (response?: { isScanning: boolean; isOcrRunning: boolean }) => {
+        if (chrome.runtime.lastError || !response) return;
+
+        const rescanButton = getButtonById("rescan-button");
+
+        if (response.isScanning) {
+          setRescanStatus("Rescanning...");
+          rescanButton.disabled = true;
+        } else if (response.isOcrRunning) {
+          setRescanStatus("Scan masih berjalan. OCR sedang diproses.");
+          rescanButton.disabled = true; 
+        } else {
+          setRescanStatus("Siap untuk discan ulang.");
+          rescanButton.disabled = false;
+        }
+      }
+    );
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAndRenderStatistics();
+  syncPopupWithCurrentState(); 
+});
 
 loadAndRenderStatistics();
 attachStorageChangeListener();

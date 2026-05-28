@@ -49,3 +49,9 @@ export interface StoredPageScanStatistics {
   algorithmStatistics: AlgorithmScanSummary[];
   updatedAt: string;
 }
+
+export interface ImageScanTarget {
+  id: number;
+  node: HTMLImageElement;
+  src: string;
+}

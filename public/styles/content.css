@@ -31,3 +31,12 @@ body.judol-blur-active .judol-blur-target {
 body.judol-blur-active .judol-blur-target:hover {
   filter: blur(2.5px) grayscale(0%);
 }
+
+body.judol-blur-active img.judol-image-blur-target {
+  filter: blur(12px) grayscale(100%);
+  transition: filter 0.3s ease-in-out;
+}
+
+body.judol-blur-active img.judol-image-blur-target:hover {
+  filter: blur(4px) grayscale(0%);
+}
