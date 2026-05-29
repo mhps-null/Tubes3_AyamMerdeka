@@ -83,7 +83,7 @@ function renderKeywordStats(keywordStats: KeywordScanStatistic[]): void {
 
   const maxCount = Math.max(...keywordStats.map((item) => item.count));
 
-  for (const item of keywordStats.slice(0, 10)) {
+  for (const item of keywordStats) {
     const percentage = maxCount === 0 ? 0 : (item.count / maxCount) * 100;
 
     const row = document.createElement("div");
