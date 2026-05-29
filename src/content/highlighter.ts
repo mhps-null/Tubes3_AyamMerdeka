@@ -157,6 +157,10 @@ function highlightTargetMatches(
   }
 
   parentNode.replaceChild(fragment, target.node);
+
+  if (parentNode instanceof HTMLElement) {
+    parentNode.classList.add("judol-blur-target");
+  }
 }
 
 export function clearExistingHighlights(): void {
@@ -169,6 +173,10 @@ export function clearExistingHighlights(): void {
 
     if (parentNode === null) {
       continue;
+    }
+
+    if (parentNode instanceof HTMLElement) {
+      parentNode.classList.remove("judol-blur-target");
     }
 
     const textNode = document.createTextNode(element.textContent ?? "");

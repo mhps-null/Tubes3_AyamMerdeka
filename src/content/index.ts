@@ -6,7 +6,9 @@ import { clearExistingHighlights, highlightMatches } from "./highlighter";
 import { attachTooltipListeners, clearTooltip } from "./tooltip";
 import { buildStoredPageScanStatistics } from "../shared/statistics";
 import { saveScanStatistics } from "./statisticsStorage";
-import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
+import { collectImageTargets } from "./domScanner";
+import { extractTextFromImage } from "./ocrProcessor";
+import { censorImageTarget, clearImageCensors } from "./imageCensor";
 
 /**
  * Content Script Entry Point
@@ -18,7 +20,9 @@ import { DETECTOR_ELEMENT_ATTRIBUTE, STYLE_ELEMENT_ID } from "./domConstants";
 
 const EXTENSION_LOG_PREFIX = "[Judol Detector AyamMerdeka]";
 const RESCAN_MESSAGE_TYPE = "JUDOL_DETECTOR_RESCAN_PAGE";
+const SETTINGS_STORAGE_KEY = "judolDetectorSettings";
 let isScanning = false;
+let isOcrActive = false;
 
 function logInfo(message: string, data?: unknown): void {
   if (data === undefined) {
@@ -37,49 +41,107 @@ function getDocumentBody(): HTMLElement | null {
   return document.body;
 }
 
-function injectHighlightStyle(): void {
-  const styleId = STYLE_ELEMENT_ID;
+function applyBlurState(isBlurActive: boolean): void {
+  const body = getDocumentBody();
+  if (body === null) return;
 
-  if (document.getElementById(styleId) !== null) {
-    return;
+  if (isBlurActive) {
+    body.classList.add("judol-blur-active");
+  } else {
+    body.classList.remove("judol-blur-active");
   }
-
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.setAttribute(DETECTOR_ELEMENT_ATTRIBUTE, "style");
-  style.textContent = `
-  .judol-detector-highlight {
-    background: #fff3a3;
-    color: inherit;
-    border-radius: 4px;
-    padding: 0 3px;
-    box-shadow: inset 0 -2px 0 #facc15;
-    cursor: help;
-  }
-
-  .judol-detector-tooltip {
-    position: fixed;
-    z-index: 2147483647;
-    background: #111827;
-    color: #f9fafb;
-    font-size: 12px;
-    line-height: 1.45;
-    padding: 9px 11px;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-    pointer-events: none;
-    max-width: 280px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-`;
-
-  document.documentElement.appendChild(style);
 }
 
-async function rescanPage(reason: string): Promise<void> {
+function loadInitialSettings(): void {
+  chrome.storage.local.get([SETTINGS_STORAGE_KEY], (result) => {
+    const settings = result[SETTINGS_STORAGE_KEY] as { isBlurActive?: boolean } | undefined;
+    const isBlurActive = settings?.isBlurActive ?? true;
+    applyBlurState(isBlurActive);
+  });
+}
+
+function attachClickInterceptor(): void {
+  document.addEventListener("click", (event: MouseEvent) => {
+    const body = getDocumentBody();
+    if (body === null || !body.classList.contains("judol-blur-active")) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    
+    if (target.closest(".judol-blur-target")) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      console.warn("Judol Detector: Tautan diblokir demi keamanan.");
+    }
+  }, true); 
+}
+
+async function runBackgroundOCR(imageTargets: any[], keywords: string[], currentScanResult: any) {
+  isOcrActive = true;
+  try {
+    logInfo(`[Background] Scanning ${imageTargets.length} images`);
+  
+    for (const imgTarget of imageTargets) {
+      logInfo(`[Background] Processing OCR for image ID: ${imgTarget.id}`);
+      const ocrText = await extractTextFromImage(imgTarget.src);
+
+      if (!ocrText || ocrText.trim() === "") continue;
+
+      logInfo(`[Background] OCR text from image ${imgTarget.id}:`, ocrText);
+
+      const mockTextNode = document.createTextNode(ocrText);
+      const mockTarget = {
+        id: -imgTarget.id, 
+        node: mockTextNode,
+        parentElement: imgTarget.node,
+        text: ocrText,
+        normalizedText: ocrText.toLowerCase().replace(/\s+/g, ' '),
+      };
+
+      const imgScanResult = scanPageTargets([mockTarget], keywords);
+
+      if (imgScanResult.matches.length > 0) {
+        logInfo(`[Background] Judol detected in image ${imgTarget.id}! Blurring image`);
+        censorImageTarget(imgTarget);
+        
+        currentScanResult.matches.push(...imgScanResult.matches);
+
+        for (const imgSummary of imgScanResult.summaries) {
+          const existingSummary = currentScanResult.summaries.find(
+            (s: any) => s.algorithm === imgSummary.algorithm
+          );
+          
+          if (existingSummary) {
+            existingSummary.matchCount += imgSummary.matchCount;
+            existingSummary.executionTimeMs += imgSummary.executionTimeMs;
+          } else {
+            currentScanResult.summaries.push(imgSummary);
+          }
+        }
+
+        const finalResolvedMatches = resolveMatchesForHighlight(currentScanResult.matches);
+        const updatedStatistics = buildStoredPageScanStatistics(
+          finalResolvedMatches, 
+          currentScanResult.summaries,
+        );
+        
+        await saveScanStatistics(updatedStatistics);
+      }
+    }
+  }
+  finally {
+    logInfo(`[Background] Finished`);
+    isOcrActive = false;
+    chrome.runtime.sendMessage({ type: "OCR_COMPLETED" }).catch(() => {});
+  }
+}
+
+async function rescanPage(reason: string): Promise<boolean> {
   if (isScanning) {
     logInfo("Scan skipped because another scan is running.");
-    return;
+    return false;
   }
 
   isScanning = true;
@@ -89,12 +151,12 @@ async function rescanPage(reason: string): Promise<void> {
 
     if (body === null) {
       logInfo("document.body not found. Detector skipped.");
-      return;
+      return false;
     }
 
     clearExistingHighlights();
     clearTooltip();
-    injectHighlightStyle();
+    clearImageCensors();
 
     logInfo("Content script loaded.");
     logInfo("Scan reason:", reason);
@@ -104,73 +166,83 @@ async function rescanPage(reason: string): Promise<void> {
     const keywords = await loadKeywords();
     const textTargets = collectTextScanTargets(body);
 
-    logInfo("Keywords loaded:", keywords);
-    logInfo("Text scan targets found:", textTargets.length);
-    logInfo(
-      "Text scan target samples:",
-      textTargets.slice(0, 5).map((target) => ({
-        id: target.id,
-        tag: target.parentElement.tagName.toLowerCase(),
-        text: target.text.trim(),
-        normalizedText: target.normalizedText.trim(),
-      })),
-    );
-
     const scanResult = scanPageTargets(textTargets, keywords);
-
-    logInfo("Scan summaries:", scanResult.summaries);
-    logInfo("Total matches found:", scanResult.matches.length);
-    logInfo("Match samples:", scanResult.matches.slice(0, 10));
-
     const matchesForHighlight = resolveMatchesForHighlight(scanResult.matches);
-
-    logInfo("Resolved matches for highlight:", matchesForHighlight.length);
-    logInfo("Resolved match samples:", matchesForHighlight.slice(0, 10));
 
     const highlightedTargetCount = highlightMatches(
       textTargets,
       matchesForHighlight,
       scanResult.summaries,
     );
-
+    
     attachTooltipListeners();
 
-    const storedStatistics = buildStoredPageScanStatistics(
-      scanResult.matches,
+    const initialStatistics = buildStoredPageScanStatistics(
+      matchesForHighlight, 
       scanResult.summaries,
     );
+    await saveScanStatistics(initialStatistics);
 
-    await saveScanStatistics(storedStatistics);
+    logInfo("Start OCR");
+    const imageTargets = collectImageTargets(body);
+    logInfo("Match image targets:", imageTargets.length);
 
-    logInfo("Highlighted text targets:", highlightedTargetCount);
-    logInfo("Scan statistics saved:", storedStatistics);
+    if (imageTargets.length > 0) {
+      runBackgroundOCR(imageTargets, keywords, scanResult).catch(err => {
+        console.error("[OCR Background Error]", err);
+      });
+      return true;
+    }
+    
+    return false;    
   } finally {
     isScanning = false;
   }
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== RESCAN_MESSAGE_TYPE) {
+  if (message?.type === "CHECK_STATUS") {
+    sendResponse({ 
+      isScanning: isScanning, 
+      isOcrRunning: isOcrActive 
+    });
     return false;
   }
 
-  rescanPage("manual-rescan")
-    .then(() => {
+  if (message?.type === RESCAN_MESSAGE_TYPE) {
+    rescanPage("manual-rescan")
+    .then((isOcrRunning) => {
       sendResponse({
         ok: true,
+        isOcrRunning: isOcrRunning 
       });
     })
     .catch((error: unknown) => {
       logError("Failed to handle manual rescan.", error);
-
       sendResponse({
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       });
     });
 
-  return true;
+    return true; 
+  }
+
+  return false;
 });
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+
+  if (SETTINGS_STORAGE_KEY in changes) {
+    const newSettings = changes[SETTINGS_STORAGE_KEY].newValue as { isBlurActive?: boolean } | undefined;
+    const isBlurActive = newSettings?.isBlurActive ?? true;
+    applyBlurState(isBlurActive);
+  }
+});
+
+loadInitialSettings();
+attachClickInterceptor();
 
 rescanPage("initial-load").catch((error: unknown) => {
   logError("Failed to scan page.", error);

@@ -151,3 +151,19 @@ button:disabled {
 #rescan-status {
   margin-top: 8px;
 }
+
+.toggle-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.toggle-container input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #facc15;
+}

@@ -1,6 +1,12 @@
-import { ahoCorasickSearch } from "../algorithms/ahoCorasick";
+import {
+  buildAhoCorasickAutomaton,
+  searchAhoCorasickAutomaton,
+} from "../algorithms/ahoCorasick";
 import { boyerMooreSearch } from "../algorithms/boyerMoore";
-import { fuzzySearch } from "../algorithms/weightedLevenshtein";
+import {
+  fuzzySearchPrepared,
+  prepareFuzzyKeywords,
+} from "../algorithms/weightedLevenshtein";
 import { kmpSearch } from "../algorithms/kmp";
 import { rabinKarpSearch } from "../algorithms/rabinKarp";
 import { regexSearch } from "../algorithms/regexMatcher";
@@ -55,6 +61,25 @@ function attachOriginalMatchedText(
 
 function normalizeKeywords(keywords: string[]): string[] {
   return keywords.map((keyword) => normalizeTextForMatching(keyword));
+}
+
+function createMatchedTargetIdSet(matches: TextMatch[]): Set<number> {
+  const matchedTargetIds = new Set<number>();
+
+  for (const match of matches) {
+    matchedTargetIds.add(match.targetId);
+  }
+
+  return matchedTargetIds;
+}
+
+function filterUnmatchedTargets(
+  targets: TextScanTarget[],
+  matches: TextMatch[],
+): TextScanTarget[] {
+  const matchedTargetIds = createMatchedTargetIdSet(matches);
+
+  return targets.filter((target) => !matchedTargetIds.has(target.id));
 }
 
 function scanWithKmp(
@@ -142,8 +167,23 @@ function scanWithFuzzy(
 } {
   const startTime = getCurrentTimeMs();
 
+  if (targets.length === 0 || keywords.length === 0) {
+    const endTime = getCurrentTimeMs();
+
+    return {
+      matches: [],
+      summary: {
+        algorithm: "FUZZY",
+        matchCount: 0,
+        executionTimeMs: endTime - startTime,
+      },
+    };
+  }
+
+  const preparedKeywords = prepareFuzzyKeywords(keywords);
+
   const matches = targets.flatMap((target) =>
-    fuzzySearch(target.normalizedText, keywords, target.id),
+    fuzzySearchPrepared(target.normalizedText, preparedKeywords, target.id),
   );
 
   const endTime = getCurrentTimeMs();
@@ -166,9 +206,10 @@ function scanWithAhoCorasick(
   summary: AlgorithmScanSummary;
 } {
   const startTime = getCurrentTimeMs();
+  const automaton = buildAhoCorasickAutomaton(keywords);
 
   const matches = targets.flatMap((target) =>
-    ahoCorasickSearch(target.normalizedText, keywords, target.id),
+    searchAhoCorasickAutomaton(target.normalizedText, automaton, target.id),
   );
 
   const endTime = getCurrentTimeMs();
@@ -219,26 +260,33 @@ export function scanPageTargets(
   const kmpResult = scanWithKmp(targets, normalizedKeywords);
   const boyerMooreResult = scanWithBoyerMoore(targets, normalizedKeywords);
   const regexResult = scanWithRegex(targets);
-  const fuzzyResult = scanWithFuzzy(targets, normalizedKeywords);
   const ahoCorasickResult = scanWithAhoCorasick(targets, normalizedKeywords);
   const rabinKarpResult = scanWithRabinKarp(targets, normalizedKeywords);
+  const fuzzyTargets = filterUnmatchedTargets(targets, [
+    ...kmpResult.matches,
+    ...boyerMooreResult.matches,
+    ...regexResult.matches,
+    ...ahoCorasickResult.matches,
+    ...rabinKarpResult.matches,
+  ]);
+  const fuzzyResult = scanWithFuzzy(fuzzyTargets, normalizedKeywords);
 
   return {
     matches: [
       ...kmpResult.matches,
       ...boyerMooreResult.matches,
       ...regexResult.matches,
-      ...fuzzyResult.matches,
       ...ahoCorasickResult.matches,
       ...rabinKarpResult.matches,
+      ...fuzzyResult.matches,
     ],
     summaries: [
       kmpResult.summary,
       boyerMooreResult.summary,
       regexResult.summary,
-      fuzzyResult.summary,
       ahoCorasickResult.summary,
       rabinKarpResult.summary,
+      fuzzyResult.summary,
     ],
   };
 }
