@@ -1,4 +1,7 @@
-import { tokenizeTextForMatching } from "../shared/textTokenizer";
+import {
+  tokenizeTextForMatching,
+  type TextToken,
+} from "../shared/textTokenizer";
 import type { TextMatch } from "../shared/types";
 
 interface SimilarcharGroup {
@@ -11,7 +14,15 @@ interface WeightedDistanceResult {
   comparisonCount: number;
 }
 
+export interface PreparedFuzzyKeyword {
+  keyword: string;
+  tokens: TextToken[];
+  minWindowWordCount: number;
+  maxWindowWordCount: number;
+}
+
 const FUZZY_MATCH_THRESHOLD = 0.3;
+const FUZZY_WINDOW_WORD_TOLERANCE = 1;
 
 const SIMILAR_CHARACTERS: Record<string, SimilarcharGroup[]> = {
   A: [
@@ -94,88 +105,160 @@ function weightedSimilarity(first: string, second: string): number {
     return 0;
   }
 
-  return (getSimilarityCost(first, second) ?? getSimilarityCost(second, first) ?? 1 );
+  return getSimilarityCost(first, second) ?? getSimilarityCost(second, first) ?? 1;
 }
 
 function calculateWeightedDistance(
   firstWord: string,
   secondWord: string,
+  maxAllowedDistance: number,
 ): WeightedDistanceResult {
   const firstLength = firstWord.length;
   const secondLength = secondWord.length;
-  const dp: number[][] = Array.from({ length: firstLength + 1 }, () => new Array(secondLength + 1).fill(0));
   let comparisonCount = 0;
 
-  for (let row = 0; row <= firstLength; row++) {
-    dp[row][0] = row;
+  if (firstLength === 0) {
+    return { distance: secondLength, comparisonCount };
   }
 
-  for (let column = 0; column <= secondLength; column++) {
-    dp[0][column] = column;
+  if (secondLength === 0) {
+    return { distance: firstLength, comparisonCount };
+  }
+
+  const bandWidth = Math.max(
+    Math.ceil(maxAllowedDistance),
+    Math.abs(firstLength - secondLength),
+  );
+
+  let previousRow = new Array<number>(secondLength + 1).fill(
+    Number.POSITIVE_INFINITY,
+  );
+
+  for (let column = 0; column <= Math.min(secondLength, bandWidth); column++) {
+    previousRow[column] = column;
   }
 
   for (let row = 1; row <= firstLength; row++) {
-    for (let column = 1; column <= secondLength; column++) {
+    const currentRow = new Array<number>(secondLength + 1).fill(
+      Number.POSITIVE_INFINITY,
+    );
+    const minColumn = Math.max(1, row - bandWidth);
+    const maxColumn = Math.min(secondLength, row + bandWidth);
+
+    if (row <= bandWidth) {
+      currentRow[0] = row;
+    }
+
+    for (let column = minColumn; column <= maxColumn; column++) {
       comparisonCount++;
 
-      const substitutionCost = weightedSimilarity(firstWord[row - 1],secondWord[column - 1],);
+      const substitutionCost = weightedSimilarity(
+        firstWord[row - 1],
+        secondWord[column - 1],
+      );
 
-      dp[row][column] = Math.min(
-        dp[row - 1][column] + 1,
-        dp[row][column - 1] + 1,
-        dp[row - 1][column - 1] + substitutionCost,
+      currentRow[column] = Math.min(
+        previousRow[column] + 1,
+        currentRow[column - 1] + 1,
+        previousRow[column - 1] + substitutionCost,
       );
     }
+
+    previousRow = currentRow;
   }
 
-  return {distance: dp[firstLength][secondLength],comparisonCount,};
+  return {
+    distance: previousRow[secondLength],
+    comparisonCount,
+  };
 }
 
-function canReachThreshold(keyword: string, candidate: string): boolean {
-  const maxLength = Math.max(keyword.length, candidate.length);
+function canReachThresholdByLength(
+  keywordLength: number,
+  candidateLength: number,
+): boolean {
+  const maxLength = Math.max(keywordLength, candidateLength);
 
   if (maxLength === 0) {
     return true;
   }
 
-  const minimumPossibleDistance = Math.abs(keyword.length - candidate.length);
+  const minimumPossibleDistance = Math.abs(keywordLength - candidateLength);
   return minimumPossibleDistance / maxLength <= FUZZY_MATCH_THRESHOLD;
 }
 
-export function fuzzySearch(
+export function prepareFuzzyKeywords(keywords: string[]): PreparedFuzzyKeyword[] {
+  const preparedKeywords: PreparedFuzzyKeyword[] = [];
+
+  for (const keyword of keywords) {
+    const tokens = tokenizeTextForMatching(keyword);
+
+    if (keyword.length === 0 || tokens.length === 0) {
+      continue;
+    }
+
+    preparedKeywords.push({
+      keyword,
+      tokens,
+      minWindowWordCount: Math.max(
+        1,
+        tokens.length - FUZZY_WINDOW_WORD_TOLERANCE,
+      ),
+      maxWindowWordCount: tokens.length + FUZZY_WINDOW_WORD_TOLERANCE,
+    });
+  }
+
+  return preparedKeywords;
+}
+
+export function fuzzySearchPrepared(
   text: string,
-  keywords: string[],
+  preparedKeywords: PreparedFuzzyKeyword[],
   targetId: number,
 ): TextMatch[] {
   const results: TextMatch[] = [];
   const tokens = tokenizeTextForMatching(text);
 
-  if (tokens.length === 0 || keywords.length === 0) {
+  if (tokens.length === 0 || preparedKeywords.length === 0) {
     return results;
   }
 
-  for (const keyword of keywords) {
-    const keywordTokens = tokenizeTextForMatching(keyword);
+  for (const preparedKeyword of preparedKeywords) {
+    const keyword = preparedKeyword.keyword;
+    const maxWindowWordCount = Math.min(
+      tokens.length,
+      preparedKeyword.maxWindowWordCount,
+    );
 
-    if (keyword.length === 0 || keywordTokens.length === 0) {
-      continue;
-    }
-
-    const maxWindowWordCount = Math.min(tokens.length,keywordTokens.length + 1,);
-
-    for (let windowWordCount = 1;windowWordCount <= maxWindowWordCount;windowWordCount++) {
-      for (let windowStart = 0;windowStart <= tokens.length - windowWordCount;windowStart++) {
+    for (
+      let windowWordCount = preparedKeyword.minWindowWordCount;
+      windowWordCount <= maxWindowWordCount;
+      windowWordCount++
+    ) {
+      for (
+        let windowStart = 0;
+        windowStart <= tokens.length - windowWordCount;
+        windowStart++
+      ) {
         const windowEnd = windowStart + windowWordCount - 1;
         const startIndex = tokens[windowStart].startIndex;
         const endIndex = tokens[windowEnd].endIndex;
-        const candidateText = text.slice(startIndex, endIndex);
+        const candidateLength = endIndex - startIndex;
 
-        if (!canReachThreshold(keyword, candidateText)) {
+        if (!canReachThresholdByLength(keyword.length, candidateLength)) {
           continue;
         }
 
-        const weightedDistance = calculateWeightedDistance(keyword,candidateText,);
-        const normalizedDistance =weightedDistance.distance /Math.max(keyword.length, candidateText.length);
+        const candidateText = text.slice(startIndex, endIndex);
+        const maxAllowedDistance =
+          FUZZY_MATCH_THRESHOLD * Math.max(keyword.length, candidateLength);
+        const weightedDistance = calculateWeightedDistance(
+          keyword,
+          candidateText,
+          maxAllowedDistance,
+        );
+        const normalizedDistance =
+          weightedDistance.distance / Math.max(keyword.length, candidateLength);
 
         if (normalizedDistance <= FUZZY_MATCH_THRESHOLD) {
           results.push({
@@ -193,4 +276,12 @@ export function fuzzySearch(
   }
 
   return results;
+}
+
+export function fuzzySearch(
+  text: string,
+  keywords: string[],
+  targetId: number,
+): TextMatch[] {
+  return fuzzySearchPrepared(text, prepareFuzzyKeywords(keywords), targetId);
 }

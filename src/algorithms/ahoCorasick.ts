@@ -1,9 +1,14 @@
 import type { TextMatch } from "../shared/types";
 
-interface AhoCorasickNode {
+export interface AhoCorasickNode {
   children: Map<string, number>;
   failureLink: number;
   outputs: string[];
+}
+
+export interface AhoCorasickAutomaton {
+  nodes: AhoCorasickNode[];
+  keywordCount: number;
 }
 
 /**
@@ -46,12 +51,16 @@ function insertKeyword(nodes: AhoCorasickNode[], keyword: string): void {
   nodes[currentNode].outputs.push(keyword);
 }
 
-function buildAutomaton(keywords: string[]): AhoCorasickNode[] {
+export function buildAhoCorasickAutomaton(
+  keywords: string[],
+): AhoCorasickAutomaton {
   let nodes: AhoCorasickNode[] = [createNode()];
+  let keywordCount = 0;
 
   for (let keyword of keywords) {
     if (keyword.length > 0) {
       insertKeyword(nodes, keyword);
+      keywordCount++;
     }
   }
 
@@ -84,21 +93,24 @@ function buildAutomaton(keywords: string[]): AhoCorasickNode[] {
     }
   }
 
-  return nodes;
+  return {
+    nodes,
+    keywordCount,
+  };
 }
 
-export function ahoCorasickSearch(
+export function searchAhoCorasickAutomaton(
   text: string,
-  keywords: string[],
+  automaton: AhoCorasickAutomaton,
   targetId: number,
 ): TextMatch[] {
   const results: TextMatch[] = [];
 
-  if (text.length === 0 || keywords.length === 0) {
+  if (text.length === 0 || automaton.keywordCount === 0) {
     return results;
   }
 
-  let nodes = buildAutomaton(keywords);
+  let nodes = automaton.nodes;
   let currentNode = 0;
   let comparisonCount = 0;
 
@@ -136,4 +148,16 @@ export function ahoCorasickSearch(
   }
 
   return results;
+}
+
+export function ahoCorasickSearch(
+  text: string,
+  keywords: string[],
+  targetId: number,
+): TextMatch[] {
+  return searchAhoCorasickAutomaton(
+    text,
+    buildAhoCorasickAutomaton(keywords),
+    targetId,
+  );
 }
