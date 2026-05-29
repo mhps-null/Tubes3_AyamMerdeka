@@ -62,7 +62,7 @@ export function boyerMooreSearch(
         } as TextMatch);
 
         // Lanjut cek dengan menggeser batas kanan teks dan reset iterator keyword
-        i = i + m; 
+        i = i + (2 * m) - 1;
         j = m - 1;
       } else {
         // Cocok, lanjutkan ke karakter berikutnya (ke kiri)
