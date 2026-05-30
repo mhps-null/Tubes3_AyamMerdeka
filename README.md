@@ -2,7 +2,7 @@
 
 > Tugas Besar 3 IF2211 Strategi Algoritma
 
-<p align="center"> <img src="doc/preview.png" width="60%"/> </p>
+<p align="center"> <img src="doc/preview.png"/> </p>
 
 Chromium browser extension untuk mendeteksi teks yang mengandung unsur judi online pada halaman web.
 

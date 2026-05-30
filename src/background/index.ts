@@ -16,7 +16,7 @@ async function setupOffscreenDocument() {
   }
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === "PROCESS_OCR") {
     
     setupOffscreenDocument().then(() => {

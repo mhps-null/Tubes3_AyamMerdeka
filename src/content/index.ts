@@ -174,6 +174,8 @@ async function rescanPage(reason: string): Promise<boolean> {
       matchesForHighlight,
       scanResult.summaries,
     );
+
+    logInfo("Highlighted text targets:", highlightedTargetCount);
     
     attachTooltipListeners();
 

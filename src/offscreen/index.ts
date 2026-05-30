@@ -49,7 +49,7 @@ async function getSafeImageData(url: string): Promise<string> {
   });
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === "RUN_TESSERACT") {
     (async () => {
       let worker;
