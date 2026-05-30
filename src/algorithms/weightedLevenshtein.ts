@@ -71,15 +71,7 @@ const SIMILAR_CHARACTERS: Record<string, SimilarcharGroup[]> = {
   ],
 };
 
-/**
- * Implementasi Weighted Levenshtein Distance.
- *
- * Ketentuan spek:
- * - Dipakai untuk fuzzy matching.
- * - Substitusi karakter mirip visual diberi penalti lebih kecil.
- * - Contoh: O/0, A/4, I/1.
- * - Harus memakai threshold agar tidak terlalu banyak false positive.
- */
+
 function getSimilarityCost(source: string, target: string): number | undefined {
   const sourceChar = source.toUpperCase();
   const targetChar = target.toUpperCase();

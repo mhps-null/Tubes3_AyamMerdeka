@@ -3,15 +3,7 @@ import type { TextMatch } from "../shared/types";
 const HASH_BASE = 257;
 const HASH_MODULUS = 1_000_000_007;
 
-/**
- * Implementasi Rabin-Karp from scratch.
- *
- * Bonus specification:
- * - Digunakan sebagai algoritma alternatif.
- * - Menggunakan rolling hash.
- * - Tetap perlu verifikasi karakter ketika hash cocok.
- * - Tidak boleh bergantung pada built-in string search.
- */
+
 function buildInitialHash(text: string, length: number): number {
   let hash = 0;
 

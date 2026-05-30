@@ -11,16 +11,6 @@ export interface AhoCorasickAutomaton {
   keywordCount: number;
 }
 
-/**
- * TODO: Implementasi Aho-Corasick from scratch.
- *
- * Bonus specification:
- * - Digunakan sebagai algoritma alternatif untuk multi-pattern matching.
- * - Cocok untuk mencari banyak keyword sekaligus dari keywords.txt.
- *
- * API ini sengaja dibuat menerima array keywords agar berbeda dari KMP/BM
- * yang biasanya mencari satu pattern per iterasi.
- */
 function createNode(): AhoCorasickNode {
   return {
     children: new Map<string, number>(),

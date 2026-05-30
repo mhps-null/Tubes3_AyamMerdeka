@@ -1,13 +1,5 @@
 import type { TextMatch } from "../shared/types";
 
-/**
- * Regex scanner untuk pola <kata><angka>.
- *
- * Contoh:
- * - slot99
- * - maxwin234
- * - gacor88
- */
 export function regexSearch(text: string, targetId: number): TextMatch[] {
   const matches: TextMatch[] = [];
 
