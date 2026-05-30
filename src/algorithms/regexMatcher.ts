@@ -3,7 +3,7 @@ import type { TextMatch } from "../shared/types";
 export function regexSearch(text: string, targetId: number): TextMatch[] {
   const matches: TextMatch[] = [];
 
-  const pattern = /\b[a-z]+[0-9]{2,3}\b/g;
+  const pattern = /\b[a-z]+[0-9]{2,3}\b/gi;
 
   let result = pattern.exec(text);
 
