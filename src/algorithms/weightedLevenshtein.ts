@@ -189,13 +189,15 @@ export function prepareFuzzyKeywords(keywords: string[]): PreparedFuzzyKeyword[]
       continue;
     }
 
+    const minWindowWordCount = Math.max(
+      tokens.length > 1 ? 2 : 1,
+      tokens.length - FUZZY_WINDOW_WORD_TOLERANCE,
+    );
+
     preparedKeywords.push({
       keyword,
       tokens,
-      minWindowWordCount: Math.max(
-        1,
-        tokens.length - FUZZY_WINDOW_WORD_TOLERANCE,
-      ),
+      minWindowWordCount,
       maxWindowWordCount: tokens.length + FUZZY_WINDOW_WORD_TOLERANCE,
     });
   }
